@@ -121,8 +121,7 @@ stages:
             device_id: debian9
             pre_script: >-
               export DEBIAN_FRONTEND=noninteractive &&
-              sudo fuser -vik -TERM /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock && sudo dpkg --configure --pending &&
-              sudo apt update && sudo apt install curl wget -y &&
+              sudo apt -o DPkg::Lock::Timeout=180 update && sudo apt -o DPkg::Lock::Timeout=180 install curl wget -y &&
               wget https://github.com/Azure/azure-iotedge/releases/download/1.2.8/aziot-identity-service_1.2.6-1_debian9_amd64.deb &&
               sudo dpkg -i aziot-identity-service_1.2.6-1_debian9_amd64.deb
           ubuntu-18.04:
