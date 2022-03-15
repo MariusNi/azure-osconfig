@@ -65,6 +65,13 @@ stages:
     parameters:
       jobName: rpi4_buster
       deviceId: ahbenmes-rpi4-buster
-      packagePattern: '**/*focal_aarch64.deb'
+      # packagePattern: '**/*focal_aarch64.deb'
       environment: rpi4-arm64
       testExpression: ${{ parameters.testExpression }}
+      sourceBuild: true
+      # source build parameters
+      variantName: ubuntu20.04
+      friendlyVariantName: ubuntu2004
+      architecture: amd64
+      containerPath: $(CONTAINER_REGISTRY)/ubuntu20.04-dev-amd64:latest
+      platform: linux/amd64

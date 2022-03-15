@@ -6,28 +6,53 @@
 #  - (Required) environment [string]: the environment to target, targets a pipeline agent with that environment
 #  - (Optional) twinTimeout [number]: Timeout for twin updates - default: 90 seconds
 #  - (Optional) testExpression [string]: the test expression to use to filter the tests (see https://docs.microsoft.com/dotnet/core/testing/selective-unit-tests?pivots=mstest) - default: all tests
+#  - (Optional) packageBranch [string]: package branch to use - default: Uses source branch
 
 parameters:
-  - name: jobName
-    type: string
-
-  - name: deviceId
-    type: string
-
-  - name: packagePattern
-    type: string
-
-  - name: environment
-    type: string
-
-  - name: twinTimeout
-    displayName: Timeout for twin updates
-    type: number
-    default: 90
+- name: jobName
+  type: string
+- name: deviceId
+  type: string
+- name: packagePattern
+  type: string
+- name: environment
+  type: string
+- name: twinTimeout
+  displayName: Timeout for twin updates
+  type: number
+  default: 90
+- name: testExpression
+  type: string
+  default: ' '
+- name: sourceBranch
+  displayName: 'Branch to use package from (default: source branch if empty)'
+  type: string
+  default: ' '
+- name: sourceBuild
+  displayName: Build and install source
+  type: boolean
+  default: false
   
-  - name: testExpression
-    type: string
-    default: ' '
+  # binary_build.yaml parameters
+- name: variantName
+  type: string
+- name: friendlyVariantName
+  type: string
+- name: architecture
+  type: string
+- name: containerPath
+  type: string
+- name: platform
+  type: string
+- name: performCoverage
+  type: boolean
+  default: false
+- name: ignoreTestFailures
+  type: boolean
+  default: true
+- name: publishArtifact
+  type: boolean
+  default: false
 
 stages:
 - stage: ${{ parameters.jobName }}
@@ -47,26 +72,58 @@ stages:
       clean: all
 
     steps:
-    - task: DownloadPipelineArtifact@2
-      displayName: Download OSConfig from pipeline
-      condition: succeededOrFailed()
-      inputs:
-        source: 'specific'
-        project: 'AzOsConfig'
-        pipeline: $(package_pipeline)
-        runVersion: 'latestFromBranch'
-        # runBranch: $(Build.SourceBranch)
-        runBranch: refs/heads/main
-        itemPattern: ${{ parameters.packagePattern }}
+    - ${{ if eq(parameters.sourceBuild, True) }}:
+      - template: binary_build.yaml
+        parameters:
+          variantName: ${{ parameters.variantName }}
+          friendlyVariantName: ${{ parameters.friendlyVariantName }}
+          architecture: ${{ parameters.architecture }}
+          containerPath: ${{ parameters.containerPath }}
+          platform: ${{ parameters.platform }}
+          performCoverage: ${{ parameters.performCoverage }}
+          ignoreTestFailures: ${{ parameters.ignoreTestFailures }}
+          publishArtifact: ${{ parameters.publishArtifact }}
+    - ${{ if and(eq(parameters.sourceBuild, False), ne(parameters.sourceBranch, ' ')) }}:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})
+        inputs:
+          source: 'specific'
+          project: 'AzOsConfig'
+          pipeline: $(package_pipeline)
+          runVersion: 'latestFromBranch'
+          runBranch: ${{ parameters.sourceBranch }}
+          itemPattern: $(packagePattern)
+    - ${{ if and(eq(parameters.sourceBuild, False), eq(parameters.sourceBranch, ' ')) }}:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
+        inputs:
+          source: 'specific'
+          project: 'AzOsConfig'
+          pipeline: $(package_pipeline)
+          runVersion: 'latestFromBranch'
+          runBranch: $(Build.SourceBranch)
+          itemPattern: $(packagePattern)
 
-    - script: |
-        sudo dpkg -i `find . -name '*.deb' | head -n 1`
-        sudo sed -i '/\"FullLogging\"/c\\  \"FullLogging\": 1,' /etc/osconfig/osconfig.json
-        sudo systemctl daemon-reload
-        sudo systemctl start osconfig
-      displayName: Install OSConfig
-      workingDirectory: $(Pipeline.Workspace)
-      condition: succeededOrFailed()
+    - ${{ if eq(parameters.sourceBuild, False) }}:
+      - script: |
+          sudo dpkg -i `find . -name '*.deb' | head -n 1`
+          sudo sed -i '/\"FullLogging\"/c\\  \"FullLogging\": 1,' /etc/osconfig/osconfig.json
+          sudo systemctl daemon-reload
+          sudo systemctl enable osconfig.service
+          sudo systemctl start osconfig
+        displayName: Install OSConfig
+        workingDirectory: $(Pipeline.Workspace)
+        condition: succeededOrFailed()
+    - ${{ if eq(parameters.sourceBuild, True) }}:
+      - script: |
+          sudo cmake --build . --target install
+          sudo sed -i '/\"FullLogging\"/c\\  \"FullLogging\": 1,' /etc/osconfig/osconfig.json
+          sudo systemctl daemon-reload
+          sudo systemctl enable osconfig.service
+          sudo systemctl start osconfig
+        displayName: Install OSConfig (from source)
+        workingDirectory: $(Build.SourcesDirectory)/build-${{ parameters.architecture }}
+        condition: succeededOrFailed()
 
     - ${{ if ne(parameters.testExpression, ' ') }}:
       - script: dotnet test --filter "${{ parameters.testExpression }}" --logger trx
@@ -100,7 +157,7 @@ stages:
         testRunner: VSTest
         testResultsFiles: $(Build.SourcesDirectory)/src/tests/e2etest/TestResults/*.trx
         failTaskOnFailedTests: true
-        testRunTitle: $(distroName)
+        testRunTitle: ${{ parameters.environment }}
 
     - script: |
         prefix=`echo baremetal-$(Build.BuildNumber)`

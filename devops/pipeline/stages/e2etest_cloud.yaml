@@ -4,6 +4,7 @@
 #  - (Optional) twinTimeout [number]: Timeout for twin updates - default: 90 seconds
 #  - (Optional) postScript [string]: bash script to perform post osconfig install (before agent start)
 #  - (Optional) testExpression [string]: the test expression to use to filter the tests (see https://docs.microsoft.com/dotnet/core/testing/selective-unit-tests?pivots=mstest) - default: all tests
+#  - (Optional) packageBranch [string]: package branch to use - default: Uses source branch
 # 
 # E2E test pipeline - performs end-to-end tests on the following platforms
 #  - Debian 9
