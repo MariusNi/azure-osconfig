@@ -121,7 +121,7 @@ stages:
             device_id: debian9
             pre_script: >-
               export DEBIAN_FRONTEND=noninteractive &&
-              while [ -f /var/lib/apt/lists/lock ]; do echo 'Waiting for lock to be released...' && sleep 5; done &&
+              sudo rm -f /var/lib/apt/lists/lock &&
               sudo apt update && sudo apt install curl wget -y &&
               wget https://github.com/Azure/azure-iotedge/releases/download/1.2.8/aziot-identity-service_1.2.6-1_debian9_amd64.deb &&
               sudo dpkg -i aziot-identity-service_1.2.6-1_debian9_amd64.deb
