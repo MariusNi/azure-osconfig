@@ -74,9 +74,6 @@ stages:
           itemPattern: ${{ parameters.packagePattern }}
 
     - ${{ if eq(parameters.sourceBuild, False) }}:
-      - checkout: self
-        submodules: recursive
-        clean: true
       - script: |
           sudo dpkg -i `find . -name '*.deb' | head -n 1`
           sudo sed -i '/\"FullLogging\"/c\\  \"FullLogging\": 1,' /etc/osconfig/osconfig.json
@@ -87,6 +84,9 @@ stages:
         workingDirectory: $(Pipeline.Workspace)
         condition: succeededOrFailed()
     - ${{ if eq(parameters.sourceBuild, True) }}:
+      - checkout: self
+        submodules: recursive
+        clean: true
       - script: |
           sudo systemctl stop osconfig | true
           cmake -DCMAKE_BUILD_TYPE=Release -Duse_prov_client=ON -Dhsm_type_symm_key=ON -DCOMPILE_WITH_STRICTNESS=ON -DMAJOR_VERSION=$(MAJORVERSION) -DMINOR_VERSION=$(MINORVERSION) -DPATCH_VERSION=$(PATCHVERSION) -G Ninja -B./build -H./src
