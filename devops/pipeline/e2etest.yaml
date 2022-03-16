@@ -48,7 +48,7 @@ parameters:
 - name: baremetalTargets
   displayName: Baremetal targets
   type: string
-  default: ---
+  default:
   - jobName: rpi4_buster
     deviceId: ahbenmes-rpi4-buster
     packagePattern: '**/*focal_aarch64.deb'
