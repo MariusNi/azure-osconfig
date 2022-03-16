@@ -33,47 +33,11 @@ parameters:
   displayName: Build and install source
   type: boolean
   default: false
-  
-  # binary_build.yaml parameters
-- name: variantName
-  type: string
-- name: friendlyVariantName
-  type: string
-- name: architecture
-  type: string
-- name: containerPath
-  type: string
-- name: platform
-  type: string
-- name: performCoverage
-  type: boolean
-  default: false
-- name: ignoreTestFailures
-  type: boolean
-  default: true
-- name: publishArtifact
-  type: boolean
-  default: false
-- name: dependsOn
-  type: object
-  default: []
 
 stages:
-- ${{ if eq(parameters.sourceBuild, True) }}:
-  - template: binary_build.yaml
-    parameters:
-      variantName: ${{ parameters.variantName }}
-      friendlyVariantName: ${{ parameters.friendlyVariantName }}
-      architecture: ${{ parameters.architecture }}
-      containerPath: ${{ parameters.containerPath }}
-      platform: ${{ parameters.platform }}
-      performCoverage: ${{ parameters.performCoverage }}
-      ignoreTestFailures: ${{ parameters.ignoreTestFailures }}
-      publishArtifact: ${{ parameters.publishArtifact }}
-
 - stage: ${{ parameters.jobName }}
   displayName: Baremetal - ${{ parameters.environment }}
-  dependsOn: ${{ if eq(parameters.sourceBuild, True) [] else parameters.prefix_parameters.friendlyVariantName_parameters.architecture }}
+  dependsOn: ${{ parameters.dependsOn }}
 
   jobs:
   - job: ${{ parameters.jobName }}
@@ -81,13 +45,14 @@ stages:
     pool:
       name: OSConfig
       demands:
+      - environment -equals baremetal
       - ${{ parameters.environment }}
 
     workspace:
       clean: all
 
     steps:
-    - ${{ if eq(parameters.sourceBuild, False) }}:
+    - ${{ if and(eq(parameters.sourceBuild, False), ne(parameters.sourceBranch, ' ')) }}:
       - task: DownloadPipelineArtifact@2
         displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})
         inputs:
@@ -97,6 +62,16 @@ stages:
           runVersion: 'latestFromBranch'
           runBranch: ${{ parameters.sourceBranch }}
           itemPattern: ${{ parameters.packagePattern }}
+    - ${{ if and(eq(parameters.sourceBuild, False), eq(parameters.sourceBranch, ' ')) }}:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
+        inputs:
+          source: 'specific'
+          project: 'AzOsConfig'
+          pipeline: $(package_pipeline)
+          runVersion: 'latestFromBranch'
+          runBranch: $(Build.SourceBranch)
+          itemPattern: ${{ parameters.packagePattern }}
 
     - ${{ if eq(parameters.sourceBuild, False) }}:
       - script: |
@@ -105,18 +80,20 @@ stages:
           sudo systemctl daemon-reload
           sudo systemctl enable osconfig.service
           sudo systemctl start osconfig
-        displayName: Install OSConfig
+        displayName: Build and Install OSConfig
         workingDirectory: $(Pipeline.Workspace)
         condition: succeededOrFailed()
     - ${{ if eq(parameters.sourceBuild, True) }}:
       - script: |
+          sudo systemctl stop osconfig | true
+          cmake -DCMAKE_BUILD_TYPE=Release -Duse_prov_client=ON -Dhsm_type_symm_key=ON -DCOMPILE_WITH_STRICTNESS=ON -DMAJOR_VERSION=$(MAJORVERSION) -DMINOR_VERSION=$(MINORVERSION) -DPATCH_VERSION=$(PATCHVERSION) -G Ninja -B./build -H./src
           sudo cmake --build . --target install
           sudo sed -i '/\"FullLogging\"/c\\  \"FullLogging\": 1,' /etc/osconfig/osconfig.json
           sudo systemctl daemon-reload
           sudo systemctl enable osconfig.service
           sudo systemctl start osconfig
         displayName: Install OSConfig (from source)
-        workingDirectory: $(Build.SourcesDirectory)/build-${{ parameters.architecture }}
+        workingDirectory: $(Build.SourcesDirectory)
         condition: succeededOrFailed()
 
     - ${{ if ne(parameters.testExpression, ' ') }}:

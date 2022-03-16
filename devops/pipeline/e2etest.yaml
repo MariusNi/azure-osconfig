@@ -32,7 +32,7 @@ parameters:
 - name: packageBranch
   displayName: 'Branch to use package from (default: source branch if empty)'
   type: string
-  default: ${{ variables['Build.SourceBranch'] }}
+  default: ' '
 - name: twinTimeout
   displayName: Timeout for twin updates
   type: number
@@ -69,9 +69,3 @@ stages:
       environment: rpi4-arm64
       testExpression: ${{ parameters.testExpression }}
       sourceBuild: true
-      # source build parameters
-      variantName: ubuntu20.04
-      friendlyVariantName: ubuntu2004
-      architecture: amd64
-      containerPath: $(CONTAINER_REGISTRY)/ubuntu20.04-dev-amd64:latest
-      platform: linux/amd64

@@ -159,15 +159,26 @@ stages:
               sudo apt install aziot-identity-service
 
     steps:
-      - task: DownloadPipelineArtifact@2
-        displayName: Download OSConfig from pipeline (${{ parameters.packageBranch }})
-        inputs:
-          source: 'specific'
-          project: 'AzOsConfig'
-          pipeline: $(package_pipeline)
-          runVersion: 'latestFromBranch'
-          runBranch: ${{ parameters.packageBranch }}
-          itemPattern: $(packagePattern)
+      - ${{ if ne(parameters.packageBranch, ' ') }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download OSConfig from pipeline (${{ parameters.packageBranch }})
+          inputs:
+            source: 'specific'
+            project: 'AzOsConfig'
+            pipeline: $(package_pipeline)
+            runVersion: 'latestFromBranch'
+            runBranch: ${{ parameters.packageBranch }}
+            itemPattern: $(packagePattern)
+      - ${{ if eq(parameters.packageBranch, ' ') }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
+          inputs:
+            source: 'specific'
+            project: 'AzOsConfig'
+            pipeline: $(package_pipeline)
+            runVersion: 'latestFromBranch'
+            runBranch: $(Build.SourceBranch)
+            itemPattern: $(packagePattern)
 
       - script: |
           cp `find . -name '*.deb' | head -n 1` $(Build.SourcesDirectory)/devops/terraform/host/osconfig.deb
