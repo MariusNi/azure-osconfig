@@ -32,7 +32,7 @@ parameters:
 - name: packageBranch
   displayName: 'Branch to use package from (default: source branch if empty)'
   type: string
-  default: ' '
+  default: ${{ variables['Build.SourceBranch'] }}
 - name: twinTimeout
   displayName: Timeout for twin updates
   type: number

@@ -54,11 +54,26 @@ parameters:
 - name: publishArtifact
   type: boolean
   default: false
+- name: dependsOn
+  type: object
+  default: []
 
 stages:
+- ${{ if eq(parameters.sourceBuild, True) }}:
+  - template: binary_build.yaml
+    parameters:
+      variantName: ${{ parameters.variantName }}
+      friendlyVariantName: ${{ parameters.friendlyVariantName }}
+      architecture: ${{ parameters.architecture }}
+      containerPath: ${{ parameters.containerPath }}
+      platform: ${{ parameters.platform }}
+      performCoverage: ${{ parameters.performCoverage }}
+      ignoreTestFailures: ${{ parameters.ignoreTestFailures }}
+      publishArtifact: ${{ parameters.publishArtifact }}
+
 - stage: ${{ parameters.jobName }}
   displayName: Baremetal - ${{ parameters.environment }}
-  dependsOn: []
+  dependsOn: ${{ if eq(parameters.sourceBuild, True) [] else parameters.prefix_parameters.friendlyVariantName_parameters.architecture }}
 
   jobs:
   - job: ${{ parameters.jobName }}
@@ -66,25 +81,13 @@ stages:
     pool:
       name: OSConfig
       demands:
-      - environment -equals baremetal
       - ${{ parameters.environment }}
 
     workspace:
       clean: all
 
     steps:
-    - ${{ if eq(parameters.sourceBuild, True) }}:
-      - template: binary_build.yaml
-        parameters:
-          variantName: ${{ parameters.variantName }}
-          friendlyVariantName: ${{ parameters.friendlyVariantName }}
-          architecture: ${{ parameters.architecture }}
-          containerPath: ${{ parameters.containerPath }}
-          platform: ${{ parameters.platform }}
-          performCoverage: ${{ parameters.performCoverage }}
-          ignoreTestFailures: ${{ parameters.ignoreTestFailures }}
-          publishArtifact: ${{ parameters.publishArtifact }}
-    - ${{ if and(eq(parameters.sourceBuild, False), ne(parameters.sourceBranch, ' ')) }}:
+    - ${{ if eq(parameters.sourceBuild, False) }}:
       - task: DownloadPipelineArtifact@2
         displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})
         inputs:
@@ -93,16 +96,6 @@ stages:
           pipeline: $(package_pipeline)
           runVersion: 'latestFromBranch'
           runBranch: ${{ parameters.sourceBranch }}
-          itemPattern: ${{ parameters.packagePattern }}
-    - ${{ if and(eq(parameters.sourceBuild, False), eq(parameters.sourceBranch, ' ')) }}:
-      - task: DownloadPipelineArtifact@2
-        displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
-        inputs:
-          source: 'specific'
-          project: 'AzOsConfig'
-          pipeline: $(package_pipeline)
-          runVersion: 'latestFromBranch'
-          runBranch: $(Build.SourceBranch)
           itemPattern: ${{ parameters.packagePattern }}
 
     - ${{ if eq(parameters.sourceBuild, False) }}:
