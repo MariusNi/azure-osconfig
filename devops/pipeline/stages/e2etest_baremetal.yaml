@@ -45,7 +45,6 @@ stages:
     pool:
       name: OSConfig
       demands:
-      - environment -equals baremetal
       - ${{ parameters.environment }}
 
     workspace:
