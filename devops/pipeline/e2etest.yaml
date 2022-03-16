@@ -45,6 +45,16 @@ parameters:
   displayName: Shell script to execute after osconfig install
   type: string
   default: ' '
+- name: baremetalTargets
+  displayName: Baremetal targets
+  type: string
+  default: ---
+  - jobName: rpi4_buster
+    deviceId: ahbenmes-rpi4-buster
+    packagePattern: '**/*focal_aarch64.deb'
+    environment: rpi4-arm64
+    testExpression: ${{ parameters.testExpression }}
+    sourceBuild: true
 
 variables:
   SERVICE_CONNECTION: OSconfig-arm
@@ -62,10 +72,4 @@ stages:
 
 - ${{ if eq(parameters.runBaremetalTests, 'true') }}:
   - template: stages/e2etest_baremetal.yaml
-    parameters:
-      jobName: rpi4_buster
-      deviceId: ahbenmes-rpi4-buster
-      packagePattern: '**/*focal_aarch64.deb'
-      environment: rpi4-arm64
-      testExpression: ${{ parameters.testExpression }}
-      sourceBuild: true
+    parameters: ${{ parameters.baremetalTargets }}

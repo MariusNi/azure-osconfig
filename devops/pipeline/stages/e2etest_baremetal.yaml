@@ -80,7 +80,7 @@ stages:
           sudo systemctl daemon-reload
           sudo systemctl enable osconfig.service
           sudo systemctl start osconfig
-        displayName: Build and Install OSConfig
+        displayName: Install OSConfig
         workingDirectory: $(Pipeline.Workspace)
         condition: succeededOrFailed()
     - ${{ if eq(parameters.sourceBuild, True) }}:
@@ -94,7 +94,8 @@ stages:
           sudo systemctl daemon-reload
           sudo systemctl enable osconfig.service
           sudo systemctl start osconfig
-        displayName: Install OSConfig (from source)
+          sudo rm -rf ./build
+        displayName: Build and Install OSConfig (from source)
         workingDirectory: $(Build.SourcesDirectory)
         condition: succeededOrFailed()
 
