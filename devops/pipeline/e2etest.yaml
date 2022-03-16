@@ -29,7 +29,7 @@ parameters:
   displayName: Leave test infrastructure in-place
   type: boolean
   default: false
-- name: packageBranch
+- name: sourceBranch
   displayName: 'Branch to use package from (default: source branch if empty)'
   type: string
   default: ' '
@@ -58,7 +58,7 @@ stages:
       skipTeardown: ${{ parameters.skipTeardown }}
       twinTimeout: ${{ parameters.twinTimeout }}
       postScript: ${{ parameters.postScript }}
-      packageBranch: ${{ parameters.packageBranch }}
+      sourceBranch: ${{ parameters.sourceBranch }}
 
 - ${{ if eq(parameters.runBaremetalTests, 'true') }}:
   - template: stages/e2etest_baremetal.yaml
@@ -68,6 +68,7 @@ stages:
       packagePattern: '**/*focal_aarch64.deb'
       environment: rpi4-arm64
       testExpression: ${{ parameters.testExpression }}
+      sourceBranch: ${{ parameters.sourceBranch }}
 
   - template: stages/e2etest_baremetal.yaml
     parameters:
@@ -76,3 +77,4 @@ stages:
       packagePattern: '**/*bionic_aarch64.deb'
       environment: nvidia-jetson-arm64
       testExpression: ${{ parameters.testExpression }}
+      sourceBranch: ${{ parameters.sourceBranch }}

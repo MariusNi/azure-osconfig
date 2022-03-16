@@ -4,7 +4,7 @@
 #  - (Optional) twinTimeout [number]: Timeout for twin updates - default: 90 seconds
 #  - (Optional) postScript [string]: bash script to perform post osconfig install (before agent start)
 #  - (Optional) testExpression [string]: the test expression to use to filter the tests (see https://docs.microsoft.com/dotnet/core/testing/selective-unit-tests?pivots=mstest) - default: all tests
-#  - (Optional) packageBranch [string]: package branch to use - default: Uses source branch
+#  - (Optional) sourceBranch [string]: package branch to use - default: Uses source branch
 # 
 # E2E test pipeline - performs end-to-end tests on the following platforms
 #  - Debian 9
@@ -33,7 +33,7 @@ parameters:
 - name: testExpression
   type: string
   default: ' '
-- name: packageBranch
+- name: sourceBranch
   displayName: 'Branch to use package from (default: source branch if empty)'
   type: string
   default: ' '
@@ -159,17 +159,17 @@ stages:
               sudo apt install aziot-identity-service
 
     steps:
-      - ${{ if ne(parameters.packageBranch, ' ') }}:
+      - ${{ if ne(parameters.sourceBranch, ' ') }}:
         - task: DownloadPipelineArtifact@2
-          displayName: Download OSConfig from pipeline (${{ parameters.packageBranch }})
+          displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})
           inputs:
             source: 'specific'
             project: 'AzOsConfig'
             pipeline: $(package_pipeline)
             runVersion: 'latestFromBranch'
-            runBranch: ${{ parameters.packageBranch }}
+            runBranch: ${{ parameters.sourceBranch }}
             itemPattern: $(packagePattern)
-      - ${{ if eq(parameters.packageBranch, ' ') }}:
+      - ${{ if eq(parameters.sourceBranch, ' ') }}:
         - task: DownloadPipelineArtifact@2
           displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
           inputs:

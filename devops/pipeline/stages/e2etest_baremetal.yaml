@@ -6,7 +6,7 @@
 #  - (Required) environment [string]: the environment to target, targets a pipeline agent with that environment
 #  - (Optional) twinTimeout [number]: Timeout for twin updates - default: 90 seconds
 #  - (Optional) testExpression [string]: the test expression to use to filter the tests (see https://docs.microsoft.com/dotnet/core/testing/selective-unit-tests?pivots=mstest) - default: all tests
-#  - (Optional) packageBranch [string]: package branch to use - default: Uses source branch
+#  - (Optional) sourceBranch [string]: package branch to use - default: Uses source branch
 
 parameters:
 - name: jobName
@@ -81,7 +81,7 @@ stages:
           sudo systemctl start osconfig
         displayName: Install OSConfig
         workingDirectory: $(Pipeline.Workspace)
-        condition: succeededOrFailed()
+        condition: succeeded()
     - ${{ if eq(parameters.sourceBuild, True) }}:
       - checkout: self
         submodules: recursive
@@ -96,7 +96,7 @@ stages:
           sudo rm -rf ./build
         displayName: Build and Install OSConfig (from source)
         workingDirectory: $(Build.SourcesDirectory)
-        condition: succeededOrFailed()
+        condition: succeeded()
 
     - ${{ if ne(parameters.testExpression, ' ') }}:
       - script: dotnet test --filter "${{ parameters.testExpression }}" --logger trx
@@ -109,7 +109,7 @@ stages:
           E2E_OSCONFIG_RESOURCE_GROUP_NAME: baremetal-$(Build.BuildNumber)
           E2E_OSCONFIG_TWIN_TIMEOUT: ${{ parameters.twinTimeout }}
         workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
-        condition: succeededOrFailed()
+        condition: succeeded()
     - ${{ if eq(parameters.testExpression, ' ') }}:
       - script: dotnet test --logger trx
         displayName: Run Test Driver
@@ -121,7 +121,7 @@ stages:
           E2E_OSCONFIG_RESOURCE_GROUP_NAME: baremetal-$(Build.BuildNumber)
           E2E_OSCONFIG_TWIN_TIMEOUT: ${{ parameters.twinTimeout }}
         workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
-        condition: succeededOrFailed()
+        condition: succeeded()
 
     - task: PublishTestResults@2
       condition: succeededOrFailed()
@@ -142,6 +142,6 @@ stages:
 
     - publish: '$(Build.ArtifactStagingDirectory)/logs/'
       displayName: 'Publish OSConfig Logs'
-      condition: succeededOrFailed()
+      condition: succeeded()
       continueOnError: true
       artifact: Logs_${{parameters.environment}}
