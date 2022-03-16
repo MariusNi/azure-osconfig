@@ -7,6 +7,7 @@
 #  - (Optional) twinTimeout [number]: Timeout for twin updates - default: 90 seconds
 #  - (Optional) testExpression [string]: the test expression to use to filter the tests (see https://docs.microsoft.com/dotnet/core/testing/selective-unit-tests?pivots=mstest) - default: all tests
 #  - (Optional) sourceBranch [string]: package branch to use - default: Uses source branch
+#  - (Optional) sourceBuild [boolean]: use  - default: Uses source branch
 
 parameters:
 - name: jobName
@@ -99,7 +100,7 @@ stages:
         condition: succeeded()
 
     - ${{ if ne(parameters.testExpression, ' ') }}:
-      - script: dotnet test --filter "${{ parameters.testExpression }}" --logger trx
+      - script: sudo dotnet test --filter "${{ parameters.testExpression }}" --logger trx
         displayName: Run Test Driver (Filtered)
         env:
           E2E_OSCONFIG_IOTHUB_CONNSTR: $(BAREMETAL_IOTHUB_CONNECTION_STRING)
@@ -111,7 +112,7 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
         condition: succeeded()
     - ${{ if eq(parameters.testExpression, ' ') }}:
-      - script: dotnet test --logger trx
+      - script: sudo dotnet test --logger trx
         displayName: Run Test Driver
         env:
           E2E_OSCONFIG_IOTHUB_CONNSTR: $(BAREMETAL_IOTHUB_CONNECTION_STRING)
