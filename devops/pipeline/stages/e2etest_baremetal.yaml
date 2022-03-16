@@ -37,7 +37,7 @@ parameters:
 stages:
 - stage: ${{ parameters.jobName }}
   displayName: Baremetal - ${{ parameters.environment }}
-  dependsOn: ${{ parameters.dependsOn }}
+  dependsOn: []
 
   jobs:
   - job: ${{ parameters.jobName }}
