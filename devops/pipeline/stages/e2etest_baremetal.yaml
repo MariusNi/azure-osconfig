@@ -15,6 +15,7 @@ parameters:
   type: string
 - name: packagePattern
   type: string
+  default: ' '
 - name: environment
   type: string
 - name: twinTimeout
@@ -92,7 +93,7 @@ stages:
           pipeline: $(package_pipeline)
           runVersion: 'latestFromBranch'
           runBranch: ${{ parameters.sourceBranch }}
-          itemPattern: $(packagePattern)
+          itemPattern: ${{ parameters.packagePattern }}
     - ${{ if and(eq(parameters.sourceBuild, False), eq(parameters.sourceBranch, ' ')) }}:
       - task: DownloadPipelineArtifact@2
         displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
@@ -102,7 +103,7 @@ stages:
           pipeline: $(package_pipeline)
           runVersion: 'latestFromBranch'
           runBranch: $(Build.SourceBranch)
-          itemPattern: $(packagePattern)
+          itemPattern: ${{ parameters.packagePattern }}
 
     - ${{ if eq(parameters.sourceBuild, False) }}:
       - script: |
