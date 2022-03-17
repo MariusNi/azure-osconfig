@@ -38,7 +38,10 @@ parameters:
 stages:
 - stage: ${{ parameters.jobName }}
   displayName: Baremetal - ${{ parameters.environment }}
-  dependsOn: []
+  dependsOn: Terraform_iothub
+  variables:
+    IOTHUB_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['iothub_name_step.IOTHUB_NAME'] ]
+    RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]
 
   jobs:
   - job: ${{ parameters.jobName }}
@@ -52,6 +55,21 @@ stages:
       clean: all
 
     steps:
+    - task: AzureCLI@2
+      displayName: Create and apply device identity
+      name: azcli_device_identity
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az login --service-principal -u "$(CLIENT_ID)" -p "$(CLIENT_SECRET)" --tenant "$(TENANT_ID)"
+          az iot hub device-identity create --device-id "$(device_id)" --hub-name $(IOTHUB_NAME) --output none
+          DEVICE_CONN_STR=`az iot hub device-identity connection-string show --hub-name $(IOTHUB_NAME) --device-id $(device_id) --output tsv`
+          sudo aziotctl config mp -c "$DEVICE_CONN_STR"
+          sudo aziotctl config apply
+
     - ${{ if and(eq(parameters.sourceBuild, False), ne(parameters.sourceBranch, ' ')) }}:
       - task: DownloadPipelineArtifact@2
         displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})

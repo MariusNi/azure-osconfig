@@ -45,12 +45,16 @@ parameters:
   displayName: Shell script to execute after osconfig install
   type: string
   default: ' '
+  
+  # TODO: Define targets here!
 
 variables:
   SERVICE_CONNECTION: OSconfig-arm
   IOTHUBOWNER_CONN_STR: $(IOTHUBOWNER_CONNECTION_STRING)
 
 stages:
+- template: stages/e2etest_iothub_create.yaml
+
 - ${{ if eq(parameters.runCloudTests, 'true') }}:
   - template: stages/e2etest_cloud.yaml
     parameters:
@@ -78,3 +82,11 @@ stages:
       environment: nvidia-jetson-arm64
       testExpression: ${{ parameters.testExpression }}
       sourceBranch: ${{ parameters.sourceBranch }}
+
+# TODO: needs dependencies fed to it to destroy properly
+- template: stages/e2etest_iothub_delete.yaml
+  parameters:
+    dependeOn: 
+    - Run_Test_Driver
+    - rpi4_buster
+    - nvidia_jetson_bionic
