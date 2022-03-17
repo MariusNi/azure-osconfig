@@ -86,7 +86,7 @@ stages:
 # TODO: needs dependencies fed to it to destroy properly
 - template: stages/e2etest_iothub_delete.yaml
   parameters:
-    dependeOn: 
+    dependsOn: 
     - Run_Test_Driver
     - rpi4_buster
     - nvidia_jetson_bionic

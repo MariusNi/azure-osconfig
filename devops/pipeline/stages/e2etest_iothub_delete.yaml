@@ -1,7 +1,7 @@
 # IoTHub creation stage definition
 
 parameters:
-- name: dependeOn
+- name: dependsOn
   displayName: Leave test infrastructure in-place
   type: object
   default: []
@@ -10,7 +10,7 @@ stages:
 - stage: Terraform_destroy_iothub
   displayName: Tear down cloud resources (iothub)
   dependsOn:
-  - ${{ each dependency in parameters.dependeOn }}:
+  - ${{ each dependency in parameters.dependsOn }}:
     - $ {{ dependency }}
   # Needs both list of VM + baremetal target stages
   pool:
