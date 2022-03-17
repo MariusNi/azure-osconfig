@@ -2,7 +2,6 @@
 
 parameters:
 - name: dependsOn
-  displayName: Leave test infrastructure in-place
   type: object
   default: []
 
@@ -10,8 +9,9 @@ stages:
 - stage: Terraform_destroy_iothub
   displayName: Tear down cloud resources (iothub)
   dependsOn:
+  - Terraform_iothub
   - ${{ each dependency in parameters.dependsOn }}:
-    - $ {{ dependency }}
+    - ${{ dependency }}
   # Needs both list of VM + baremetal target stages
   pool:
       vmImage: 'ubuntu-18.04'
