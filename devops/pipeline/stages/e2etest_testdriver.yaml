@@ -3,6 +3,8 @@
 parameters:
 - name: deviceId
   type: string
+- name: testRunName
+  type: string
 - name: twinTimeout
   displayName: Timeout for twin updates
   type: number
@@ -54,12 +56,12 @@ stages:
           testRunner: VSTest
           testResultsFiles: '$(Build.SourcesDirectory)/src/tests/e2etest/TestResults/*.trx'
           failTaskOnFailedTests: true
-          testRunTitle: $(distroName)
+          testRunTitle: ${{parameters.testRunName}}
 
       - script: |
           rg=`echo $(RESOURCE_GROUP_NAME) | sed -r 's/"//g'`
           mkdir -p $(Build.ArtifactStagingDirectory)/logs
-          wget "$(UPLOAD_URL_BASE_PATH)`echo $rg`-${{ parameters.deviceId }}.tar.gz?$(SAS_TOKEN)" -O $(Build.ArtifactStagingDirectory)/logs/`echo $rg`-${{ parameters.target.device_id }}.tar.gz
+          wget "$(UPLOAD_URL_BASE_PATH)`echo $rg`-${{parameters.deviceId}}.tar.gz?$(SAS_TOKEN)" -O $(Build.ArtifactStagingDirectory)/logs/`echo $rg`-${{parameters.deviceId}}.tar.gz
         displayName: Get OSConfig logs from blobstore
         condition: or(succeeded(), failed())
         continueOnError: true
@@ -68,4 +70,4 @@ stages:
         displayName: 'Publish OSConfig Logs'
         condition: or(succeeded(), failed())
         continueOnError: true
-        artifact: Logs_$(distroName)
+        artifact: Logs_${{parameters.testRunName}}

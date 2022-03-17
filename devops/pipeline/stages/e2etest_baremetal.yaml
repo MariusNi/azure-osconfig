@@ -120,5 +120,6 @@ stages:
 - template: e2etest_testdriver.yaml
   parameters:
     deviceId: ${{parameters.deviceId}}
+    testRunName: ${{parameters.deviceId}}
     testExpression: ${{ parameters.testExpression }}
     twinTimeout: ${{ parameters.twinTimeout }}
