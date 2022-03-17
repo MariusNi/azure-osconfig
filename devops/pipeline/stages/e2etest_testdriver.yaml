@@ -1,0 +1,71 @@
+# E2E Cloud Test Stage Definition
+
+parameters:
+- name: deviceId
+  type: string
+- name: twinTimeout
+  displayName: Timeout for twin updates
+  type: number
+  default: 90
+- name: testExpression
+  type: string
+  default: ' '
+
+stages:
+- stage: Run_Test_Driver
+  displayName: Execute E2E Test
+  dependsOn:
+    - Terraform_iothub
+    - Terraform_VM
+  variables:
+    IOTHUBOWNER_CONN_STR: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['iothubowner_conn_str_step.IOTHUBOWNER_CONN_STR'] ]
+    RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]
+  jobs:
+  - job: E2ETestJob
+    container: dotnet
+    steps:
+      - ${{ if ne(parameters.testExpression, ' ') }}:
+        - script: dotnet test --filter "${{ parameters.testExpression }}" --logger trx
+          displayName: Run Test Driver (Filtered)
+          env:
+            E2E_OSCONFIG_IOTHUB_CONNSTR: $(IOTHUBOWNER_CONN_STR)
+            E2E_OSCONFIG_DEVICE_ID: ${{ parameters.target.device_id }}
+            E2E_OSCONFIG_SAS_TOKEN: $(SAS_TOKEN)
+            E2E_OSCONFIG_UPLOAD_URL: $(UPLOAD_URL_BASE_PATH)
+            E2E_OSCONFIG_RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)
+            E2E_OSCONFIG_TWIN_TIMEOUT: ${{ parameters.twinTimeout }}
+          workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
+      - ${{ if eq(parameters.testExpression, ' ') }}:
+        - script: dotnet test --logger trx
+          displayName: Run Test Driver
+          env:
+            E2E_OSCONFIG_IOTHUB_CONNSTR: $(IOTHUBOWNER_CONN_STR)
+            E2E_OSCONFIG_DEVICE_ID: ${{ parameters.target.device_id }}
+            E2E_OSCONFIG_SAS_TOKEN: $(SAS_TOKEN)
+            E2E_OSCONFIG_UPLOAD_URL: $(UPLOAD_URL_BASE_PATH)
+            E2E_OSCONFIG_RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)
+            E2E_OSCONFIG_TWIN_TIMEOUT: ${{ parameters.twinTimeout }}
+          workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
+
+      - task: PublishTestResults@2
+        condition: or(succeeded(), failed())
+        continueOnError: true
+        inputs:
+          testRunner: VSTest
+          testResultsFiles: '$(Build.SourcesDirectory)/src/tests/e2etest/TestResults/*.trx'
+          failTaskOnFailedTests: true
+          testRunTitle: $(distroName)
+
+      - script: |
+          rg=`echo $(RESOURCE_GROUP_NAME) | sed -r 's/"//g'`
+          mkdir -p $(Build.ArtifactStagingDirectory)/logs
+          wget "$(UPLOAD_URL_BASE_PATH)`echo $rg`-${{ parameters.target.device_id }}.tar.gz?$(SAS_TOKEN)" -O $(Build.ArtifactStagingDirectory)/logs/`echo $rg`-${{ parameters.target.device_id }}.tar.gz
+        displayName: Get OSConfig logs from blobstore
+        condition: or(succeeded(), failed())
+        continueOnError: true
+
+      - publish: '$(Build.ArtifactStagingDirectory)/logs/'
+        displayName: 'Publish OSConfig Logs'
+        condition: or(succeeded(), failed())
+        continueOnError: true
+        artifact: Logs_$(distroName)

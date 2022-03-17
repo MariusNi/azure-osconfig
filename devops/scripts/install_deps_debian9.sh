@@ -30,3 +30,5 @@ cmake --build . --target install
 
 # cleanup
 cd ~ && rm -rf googletest CMake rapidjson
+
+# todo: Add Dotnet

@@ -65,8 +65,8 @@ stages:
         inlineScript: |
           az config set extension.use_dynamic_install=yes_without_prompt
           az login --service-principal -u "$(CLIENT_ID)" -p "$(CLIENT_SECRET)" --tenant "$(TENANT_ID)"
-          az iot hub device-identity create --device-id "$(device_id)" --hub-name $(IOTHUB_NAME) --output none
-          DEVICE_CONN_STR=`az iot hub device-identity connection-string show --hub-name $(IOTHUB_NAME) --device-id $(device_id) --output tsv`
+          az iot hub device-identity create --device-id "${{parameters.deviceId}}" --hub-name $(IOTHUB_NAME) --output none
+          DEVICE_CONN_STR=`az iot hub device-identity connection-string show --hub-name $(IOTHUB_NAME) --device-id ${{parameters.deviceId}} --output tsv`
           sudo aziotctl config mp -c "$DEVICE_CONN_STR"
           sudo aziotctl config apply
 
@@ -117,50 +117,8 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)
         condition: succeeded()
 
-    - ${{ if ne(parameters.testExpression, ' ') }}:
-      - script: sudo dotnet test --filter "${{ parameters.testExpression }}" --logger trx
-        displayName: Run Test Driver (Filtered)
-        env:
-          E2E_OSCONFIG_IOTHUB_CONNSTR: $(BAREMETAL_IOTHUB_CONNECTION_STRING)
-          E2E_OSCONFIG_DEVICE_ID: ${{parameters.deviceId}}
-          E2E_OSCONFIG_SAS_TOKEN: $(SAS_TOKEN)
-          E2E_OSCONFIG_UPLOAD_URL: $(UPLOAD_URL_BASE_PATH)
-          E2E_OSCONFIG_RESOURCE_GROUP_NAME: baremetal-$(Build.BuildNumber)
-          E2E_OSCONFIG_TWIN_TIMEOUT: ${{ parameters.twinTimeout }}
-        workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
-        condition: succeeded()
-    - ${{ if eq(parameters.testExpression, ' ') }}:
-      - script: sudo dotnet test --logger trx
-        displayName: Run Test Driver
-        env:
-          E2E_OSCONFIG_IOTHUB_CONNSTR: $(BAREMETAL_IOTHUB_CONNECTION_STRING)
-          E2E_OSCONFIG_DEVICE_ID: ${{parameters.deviceId}}
-          E2E_OSCONFIG_SAS_TOKEN: $(SAS_TOKEN)
-          E2E_OSCONFIG_UPLOAD_URL: $(UPLOAD_URL_BASE_PATH)
-          E2E_OSCONFIG_RESOURCE_GROUP_NAME: baremetal-$(Build.BuildNumber)
-          E2E_OSCONFIG_TWIN_TIMEOUT: ${{ parameters.twinTimeout }}
-        workingDirectory: $(Build.SourcesDirectory)/src/tests/e2etest
-        condition: succeeded()
-
-    - task: PublishTestResults@2
-      condition: succeededOrFailed()
-      continueOnError: true
-      inputs:
-        testRunner: VSTest
-        testResultsFiles: $(Build.SourcesDirectory)/src/tests/e2etest/TestResults/*.trx
-        failTaskOnFailedTests: true
-        testRunTitle: ${{ parameters.environment }}
-
-    - script: |
-        prefix=`echo baremetal-$(Build.BuildNumber)`
-        mkdir -p $(Build.ArtifactStagingDirectory)/logs
-        wget "$(UPLOAD_URL_BASE_PATH)`echo $prefix`-${{parameters.deviceId}}.tar.gz?$(SAS_TOKEN)" -O $(Build.ArtifactStagingDirectory)/logs/`echo $prefix`-${{parameters.deviceId}}.tar.gz
-      displayName: Get OSConfig logs from blobstore
-      condition: succeededOrFailed()
-      continueOnError: true
-
-    - publish: '$(Build.ArtifactStagingDirectory)/logs/'
-      displayName: 'Publish OSConfig Logs'
-      condition: succeeded()
-      continueOnError: true
-      artifact: Logs_${{parameters.environment}}
+- template: e2etest_testdriver.yaml
+  parameters:
+    deviceId: ${{parameters.deviceId}}
+    testExpression: ${{ parameters.testExpression }}
+    twinTimeout: ${{ parameters.twinTimeout }}
