@@ -118,13 +118,13 @@ stages:
 
 - template: e2etest_testdriver.yaml
   parameters:
-    deviceId: ${{parameters.target.device_id}}
-    testRunName: ${{parameters.target.device_id}}
+    deviceId: ${{ parameters.target.device_id }}
+    testRunName: ${{ parameters.target.device_id }}
     deviceStageName: Terraform_VM_${{ parameters.target.device_id }}
     testExpression: ${{ parameters.testExpression }}
     twinTimeout: ${{ parameters.twinTimeout }}
 
-- stage: Terraform_destroy_vm
+- stage: Terraform_destroy_vm_${{parameters.target.device_id}}
   displayName: Tear down cloud resources (VMs)
   dependsOn:
     - Terraform_iothub
@@ -175,7 +175,7 @@ stages:
       continueOnError: true
       artifact: DeviceTwin_$(distroName)
 
-- stage: Terraform_stop_vm
+- stage: Terraform_stop_vm_${{ parameters.target.device_id }}
   displayName: Stop VMs
   condition: succeededOrFailed()
   dependsOn:
