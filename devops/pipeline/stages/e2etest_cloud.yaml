@@ -117,6 +117,10 @@ stages:
         artifact: terraformStateVM_$(distroName)
 
 - template: e2etest_testdriver.yaml
+  parameters:
+    deviceId: ${{parameters.deviceId}}
+    testExpression: ${{ parameters.testExpression }}
+    twinTimeout: ${{ parameters.twinTimeout }}
 
 - stage: Terraform_destroy_vm
   displayName: Tear down cloud resources (VMs)
