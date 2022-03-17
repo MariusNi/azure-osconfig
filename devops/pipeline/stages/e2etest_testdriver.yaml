@@ -5,6 +5,8 @@ parameters:
   type: string
 - name: testRunName
   type: string
+- name: deviceStageName
+  type: string
 - name: twinTimeout
   displayName: Timeout for twin updates
   type: number
@@ -14,11 +16,11 @@ parameters:
   default: ' '
 
 stages:
-- stage: Run_Test_Driver
+- stage: Run_Test_Driver_${{parameters.deviceId}}
   displayName: Execute E2E Test
   dependsOn:
     - Terraform_iothub
-    - Terraform_VM
+    - ${{parameters.deviceStageName}}
   variables:
     IOTHUBOWNER_CONN_STR: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['iothubowner_conn_str_step.IOTHUBOWNER_CONN_STR'] ]
     RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]

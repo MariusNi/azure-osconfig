@@ -121,5 +121,6 @@ stages:
   parameters:
     deviceId: ${{parameters.deviceId}}
     testRunName: ${{parameters.deviceId}}
+    deviceStageName: ${{ parameters.jobName }}
     testExpression: ${{ parameters.testExpression }}
     twinTimeout: ${{ parameters.twinTimeout }}

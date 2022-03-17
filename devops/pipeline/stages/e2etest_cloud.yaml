@@ -44,7 +44,7 @@ parameters:
   default: ' '
 
 stages:
-- stage: Terraform_VM
+- stage: Terraform_VM_${{ parameters.target.device_id }}
   displayName: Cloud - Create Identity + VMs
   dependsOn: Terraform_iothub
   variables:
@@ -120,6 +120,7 @@ stages:
   parameters:
     deviceId: ${{parameters.target.device_id}}
     testRunName: ${{parameters.target.device_id}}
+    deviceStageName: Terraform_VM_${{ parameters.target.device_id }}
     testExpression: ${{ parameters.testExpression }}
     twinTimeout: ${{ parameters.twinTimeout }}
 
@@ -127,8 +128,8 @@ stages:
   displayName: Tear down cloud resources (VMs)
   dependsOn:
     - Terraform_iothub
-    - Terraform_VM
-    - Run_Test_Driver
+    - Terraform_VM_${{ parameters.target.device_id }}
+    - Run_Test_Driver_${{ parameters.target.device_id }}
   variables:
     IOTHUB_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['iothub_name_step.IOTHUB_NAME'] ]
     RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]
@@ -179,8 +180,8 @@ stages:
   condition: succeededOrFailed()
   dependsOn:
     - Terraform_iothub
-    - Terraform_VM
-    - Run_Test_Driver
+    - Terraform_VM_${{ parameters.target.device_id }}
+    - Run_Test_Driver_${{ parameters.target.device_id }}
   variables:
     RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]
   pool:
@@ -189,7 +190,7 @@ stages:
   - job: StopVMs
     steps:
     - task: AzureCLI@2
-      displayName: Stop running VMs
+      displayName: Stop running VM
       continueOnError: true
       name: azcli_dt
       inputs:
@@ -200,7 +201,4 @@ stages:
           az config set extension.use_dynamic_install=yes_without_prompt
           az login --service-principal -u "$(CLIENT_ID)" -p "$(CLIENT_SECRET)" --tenant "72f988bf-86f1-41af-91ab-2d7cd011db47"
           # Add new distros as needed
-          az vm deallocate --no-wait --resource-group $(RESOURCE_GROUP_NAME) --name myVM-debian-9
-          az vm deallocate --no-wait --resource-group $(RESOURCE_GROUP_NAME) --name myVM-ubuntu-18.04
-          az vm deallocate --no-wait --resource-group $(RESOURCE_GROUP_NAME) --name myVM-ubuntu-20.04
-
+          az vm deallocate --no-wait --resource-group $(RESOURCE_GROUP_NAME) --name myVM-${{parameters.target.distroName}}
