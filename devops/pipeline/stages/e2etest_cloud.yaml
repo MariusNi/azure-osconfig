@@ -114,7 +114,7 @@ stages:
       - publish: '$(Build.ArtifactStagingDirectory)/terraform/host'
         displayName: 'Publish Terraform state for destroy stage (vm)'
         continueOnError: true
-        artifact: terraformStateVM_$(distroName)
+        artifact: terraformStateVM_${{parameters.target.distroName}}
 
 - template: e2etest_testdriver.yaml
   parameters:
@@ -147,13 +147,13 @@ stages:
       displayName: Installing Terraform
 
     - download: current
-      artifact: terraformStateVM_$(distroName)
+      artifact: terraformStateVM_${{parameters.target.distroName}}
       displayName: Fetching terraform state (VM)
 
     - script: |
         terraform init
         terraform destroy -var client_id="$(CLIENT_ID)" -var client_secret="$(CLIENT_SECRET)" -var subscription_id="$(SUBSCRIPTION_ID)" -var tenant_id="$(TENANT_ID)" -var key_vault_id="$(KEY_VAULT_ID)" -var device_identity_connstr="null" -var resource_group_name=$(RESOURCE_GROUP_NAME) -var osconfig_package_path="./osconfig.deb" -var sas_token="NULL" -auto-approve || true
-      workingDirectory: $(Pipeline.Workspace)/terraformStateVM_$(distroName)
+      workingDirectory: $(Pipeline.Workspace)/terraformStateVM_${{parameters.target.distroName}}
       displayName: Destroy cloud resources (VM)
       continueOnError: true
 
@@ -173,7 +173,7 @@ stages:
     - publish: '$(Build.ArtifactStagingDirectory)/${{ parameters.target.device_id }}_twin.json'
       displayName: 'Publish twin for ${{ parameters.target.device_id }}'
       continueOnError: true
-      artifact: DeviceTwin_$(distroName)
+      artifact: DeviceTwin_${{parameters.target.distroName}}
 
 - stage: Terraform_stop_vm_${{ parameters.target.device_id }}
   displayName: Stop VMs
