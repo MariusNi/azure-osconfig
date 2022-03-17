@@ -51,7 +51,7 @@ stages:
     IOTHUB_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['iothub_name_step.IOTHUB_NAME'] ]
     RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]
   pool:
-        vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-18.04'
   jobs:
   - job: TerraformJobVM
     steps:

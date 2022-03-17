@@ -10,6 +10,7 @@
 #  - (Optional) sourceBuild [boolean]: use  - default: Uses source branch
 
 parameters:
+# TODO: get rid of this jobName, unecessary
 - name: jobName
   type: string
 - name: deviceId
@@ -36,15 +37,14 @@ parameters:
   default: false
 
 stages:
-- stage: ${{ parameters.jobName }}
+- stage: Baremetal_${{ parameters.deviceId }}
   displayName: Baremetal - ${{ parameters.environment }}
   dependsOn: Terraform_iothub
   variables:
     IOTHUB_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['iothub_name_step.IOTHUB_NAME'] ]
     RESOURCE_GROUP_NAME: $[ stageDependencies.Terraform_iothub.TerraformJobIotHub.outputs['resource_group_name_step.RESOURCE_GROUP_NAME'] ]
-
   jobs:
-  - job: ${{ parameters.jobName }}
+  - job: Baremetal
 
     pool:
       name: OSConfig
@@ -121,6 +121,6 @@ stages:
   parameters:
     deviceId: ${{parameters.deviceId}}
     testRunName: ${{parameters.jobName}}
-    deviceStageName: ${{ parameters.jobName }}
+    deviceStageName: Baremetal_${{ parameters.deviceId }}
     testExpression: ${{ parameters.testExpression }}
     twinTimeout: ${{ parameters.twinTimeout }}
