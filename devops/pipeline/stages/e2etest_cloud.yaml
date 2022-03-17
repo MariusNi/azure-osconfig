@@ -54,68 +54,67 @@ stages:
         vmImage: 'ubuntu-18.04'
   jobs:
   - job: TerraformJobVM
+    steps:
+      - ${{ if ne(parameters.sourceBranch, ' ') }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})
+          inputs:
+            source: 'specific'
+            project: 'AzOsConfig'
+            pipeline: $(package_pipeline)
+            runVersion: 'latestFromBranch'
+            runBranch: ${{ parameters.sourceBranch }}
+            itemPattern: ${{ parameters.target.packagePattern }}
+      - ${{ if eq(parameters.sourceBranch, ' ') }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
+          inputs:
+            source: 'specific'
+            project: 'AzOsConfig'
+            pipeline: $(package_pipeline)
+            runVersion: 'latestFromBranch'
+            runBranch: $(Build.SourceBranch)
+            itemPattern: ${{ parameters.target.packagePattern }}
 
-  steps:
-    - ${{ if ne(parameters.sourceBranch, ' ') }}:
-      - task: DownloadPipelineArtifact@2
-        displayName: Download OSConfig from pipeline (${{ parameters.sourceBranch }})
+      - script: |
+          cp `find . -name '*.deb' | head -n 1` $(Build.SourcesDirectory)/devops/terraform/host/osconfig.deb
+        displayName: Stage OSConfig
+        workingDirectory: $(Pipeline.Workspace)
+
+      - task: AzureCLI@2
+        displayName: Create device identity
+        name: azcli_device_identity
         inputs:
-          source: 'specific'
-          project: 'AzOsConfig'
-          pipeline: $(package_pipeline)
-          runVersion: 'latestFromBranch'
-          runBranch: ${{ parameters.sourceBranch }}
-          itemPattern: ${{ parameters.target.packagePattern }}
-    - ${{ if eq(parameters.sourceBranch, ' ') }}:
-      - task: DownloadPipelineArtifact@2
-        displayName: Download OSConfig from pipeline ($(Build.SourceBranch))
-        inputs:
-          source: 'specific'
-          project: 'AzOsConfig'
-          pipeline: $(package_pipeline)
-          runVersion: 'latestFromBranch'
-          runBranch: $(Build.SourceBranch)
-          itemPattern: ${{ parameters.target.packagePattern }}
+          azureSubscription: $(SERVICE_CONNECTION)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az login --service-principal -u "$(CLIENT_ID)" -p "$(CLIENT_SECRET)" --tenant "$(TENANT_ID)"
+            az iot hub device-identity create --device-id "${{ parameters.target.device_id }}" --hub-name $(IOTHUB_NAME) --output none
+            DEVICE_CONN_STR=`az iot hub device-identity connection-string show --hub-name $(IOTHUB_NAME) --device-id ${{ parameters.target.device_id }} --output tsv`
+            echo "##vso[task.setvariable variable=DEVICE_CONN_STR;issecret=true]$DEVICE_CONN_STR"
 
-    - script: |
-        cp `find . -name '*.deb' | head -n 1` $(Build.SourcesDirectory)/devops/terraform/host/osconfig.deb
-      displayName: Stage OSConfig
-      workingDirectory: $(Pipeline.Workspace)
+      - script: 'terraform init'
+        displayName: terraform init (VM)
+        continueOnError: true
+        workingDirectory: $(Build.SourcesDirectory)/devops/terraform/host
 
-    - task: AzureCLI@2
-      displayName: Create device identity
-      name: azcli_device_identity
-      inputs:
-        azureSubscription: $(SERVICE_CONNECTION)
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az config set extension.use_dynamic_install=yes_without_prompt
-          az login --service-principal -u "$(CLIENT_ID)" -p "$(CLIENT_SECRET)" --tenant "$(TENANT_ID)"
-          az iot hub device-identity create --device-id "${{ parameters.target.device_id }}" --hub-name $(IOTHUB_NAME) --output none
-          DEVICE_CONN_STR=`az iot hub device-identity connection-string show --hub-name $(IOTHUB_NAME) --device-id ${{ parameters.target.device_id }} --output tsv`
-          echo "##vso[task.setvariable variable=DEVICE_CONN_STR;issecret=true]$DEVICE_CONN_STR"
+      - script: terraform apply -var subscription_id="$(SUBSCRIPTION_ID)" -var tenant_id="$(TENANT_ID)" -var client_id="$(CLIENT_ID)" -var client_secret="$(CLIENT_SECRET)" -var key_vault_id="$(KEY_VAULT_ID)" -var device_identity_connstr='$(DEVICE_CONN_STR)' -var resource_group_name=$(RESOURCE_GROUP_NAME) -var osconfig_package_path="./osconfig.deb" -var vm_name=${{parameters.target.distroName}} -var image_offer=${{parameters.target.image_offer}} -var image_publisher=${{parameters.target.image_publisher}} -var image_sku=${{parameters.target.image_sku}} -var image_version=${{parameters.target.image_version}} -var sas_token="$(SAS_TOKEN)" -var vm_pre_osconfig_install_script="$(pre_script)" -var vm_post_osconfig_install_script="${{ parameters.postScript }}" -auto-approve
+        displayName: terraform apply
+        continueOnError: true
+        workingDirectory: $(Build.SourcesDirectory)/devops/terraform/host
 
-    - script: 'terraform init'
-      displayName: terraform init (VM)
-      continueOnError: true
-      workingDirectory: $(Build.SourcesDirectory)/devops/terraform/host
+      - script: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/terraform/host
+          cp -R $(Build.SourcesDirectory)/devops/terraform/host/* $(Build.ArtifactStagingDirectory)/terraform/host
+        displayName: Copy terraform state (vm)
+        continueOnError: true
 
-    - script: terraform apply -var subscription_id="$(SUBSCRIPTION_ID)" -var tenant_id="$(TENANT_ID)" -var client_id="$(CLIENT_ID)" -var client_secret="$(CLIENT_SECRET)" -var key_vault_id="$(KEY_VAULT_ID)" -var device_identity_connstr='$(DEVICE_CONN_STR)' -var resource_group_name=$(RESOURCE_GROUP_NAME) -var osconfig_package_path="./osconfig.deb" -var vm_name=${{parameters.target.distroName}} -var image_offer=${{parameters.target.image_offer}} -var image_publisher=${{parameters.target.image_publisher}} -var image_sku=${{parameters.target.image_sku}} -var image_version=${{parameters.target.image_version}} -var sas_token="$(SAS_TOKEN)" -var vm_pre_osconfig_install_script="$(pre_script)" -var vm_post_osconfig_install_script="${{ parameters.postScript }}" -auto-approve
-      displayName: terraform apply
-      continueOnError: true
-      workingDirectory: $(Build.SourcesDirectory)/devops/terraform/host
-
-    - script: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/terraform/host
-        cp -R $(Build.SourcesDirectory)/devops/terraform/host/* $(Build.ArtifactStagingDirectory)/terraform/host
-      displayName: Copy terraform state (vm)
-      continueOnError: true
-
-    - publish: '$(Build.ArtifactStagingDirectory)/terraform/host'
-      displayName: 'Publish Terraform state for destroy stage (vm)'
-      continueOnError: true
-      artifact: terraformStateVM_$(distroName)
+      - publish: '$(Build.ArtifactStagingDirectory)/terraform/host'
+        displayName: 'Publish Terraform state for destroy stage (vm)'
+        continueOnError: true
+        artifact: terraformStateVM_$(distroName)
 
 - template: e2etest_testdriver.yaml
 
