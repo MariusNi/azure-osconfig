@@ -148,6 +148,8 @@ stages:
 - template: stages/e2etest_iothub_delete.yaml
   parameters:
     dependsOn: 
-    - Run_Test_Driver
-    - rpi4_buster
-    - nvidia_jetson_bionic
+    - Run_Test_Driver_ubuntu1804
+    - Run_Test_Driver_ubuntu2004
+    - Run_Test_Driver_debian9
+    - Run_Test_Driver_rpi4_buster
+    - Run_Test_Driver_nvidia_jetson_bionic
