@@ -29,7 +29,7 @@ stages:
           displayName: Run Test Driver (Filtered)
           env:
             E2E_OSCONFIG_IOTHUB_CONNSTR: $(IOTHUBOWNER_CONN_STR)
-            E2E_OSCONFIG_DEVICE_ID: ${{ parameters.device_id }}
+            E2E_OSCONFIG_DEVICE_ID: ${{ parameters.deviceId }}
             E2E_OSCONFIG_SAS_TOKEN: $(SAS_TOKEN)
             E2E_OSCONFIG_UPLOAD_URL: $(UPLOAD_URL_BASE_PATH)
             E2E_OSCONFIG_RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)
@@ -40,7 +40,7 @@ stages:
           displayName: Run Test Driver
           env:
             E2E_OSCONFIG_IOTHUB_CONNSTR: $(IOTHUBOWNER_CONN_STR)
-            E2E_OSCONFIG_DEVICE_ID: ${{ parameters.device_id }}
+            E2E_OSCONFIG_DEVICE_ID: ${{ parameters.deviceId }}
             E2E_OSCONFIG_SAS_TOKEN: $(SAS_TOKEN)
             E2E_OSCONFIG_UPLOAD_URL: $(UPLOAD_URL_BASE_PATH)
             E2E_OSCONFIG_RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)
@@ -59,7 +59,7 @@ stages:
       - script: |
           rg=`echo $(RESOURCE_GROUP_NAME) | sed -r 's/"//g'`
           mkdir -p $(Build.ArtifactStagingDirectory)/logs
-          wget "$(UPLOAD_URL_BASE_PATH)`echo $rg`-${{ parameters.device_id }}.tar.gz?$(SAS_TOKEN)" -O $(Build.ArtifactStagingDirectory)/logs/`echo $rg`-${{ parameters.target.device_id }}.tar.gz
+          wget "$(UPLOAD_URL_BASE_PATH)`echo $rg`-${{ parameters.deviceId }}.tar.gz?$(SAS_TOKEN)" -O $(Build.ArtifactStagingDirectory)/logs/`echo $rg`-${{ parameters.target.device_id }}.tar.gz
         displayName: Get OSConfig logs from blobstore
         condition: or(succeeded(), failed())
         continueOnError: true
